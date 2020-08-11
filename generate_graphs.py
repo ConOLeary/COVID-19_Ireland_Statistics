@@ -102,16 +102,33 @@ graph_two.x_labels_major = map(str, range(0, 136)[0::10])
 graph_two.add('Vrnce of mean', variancesEmpiricalM)
 graph_two.render_to_file('graph_two.svg')
 
-interval68CLTs = interval68CLTs[0::10]
-interval95CLTs = interval95CLTs[0::10]
-interval997CLTs = interval997CLTs[0::10]
-graph_three = pygal.Bar(x_title='Days since March 18th 2020', style=pygal.style.styles['default']())
-graph_three.title = 'to be inserted'
-graph_three.add('First', [{'value': 2, 'ci': {
-  'type': 'continuous', 'sample_size': 50, 'stddev': .5, 'confidence': .95}}])
-graph_three.add('CLT 68% intervals', interval68CLTs)
-graph_three.add('CLT 95% intervals', interval95CLTs)
-graph_three.add('CLT 99.7% intervals', interval997CLTs)
+trimValsBy = 19
+interval68CLTs = interval68CLTs[0::trimValsBy]
+interval95CLTs = interval95CLTs[0::trimValsBy]
+interval997CLTs = interval997CLTs[0::trimValsBy]
+stdDeviations = stdDeviations[0::trimValsBy]
+graph_three = pygal.Bar(x_title='68(left), 95(mid), & 99.7(right)% conifence intervals over time', y_title='Span of interval in percent', style=pygal.style.styles['default']())
+graph_three.title = 'Confidence intervals vs time for P(X0 = 1) using the CLT'
+j = 0
+for i in range(len(interval68CLTs)):
+    j += trimValsBy
+    graph_three.add('', [{'value': interval68CLTs[i], 'ci': {
+        'type': 'continuous', 'sample_size': j, 'stddev': stdDeviations[i], 'confidence': .68}}])
+    j += trimValsBy
+graph_three.add('', [{'value': 0}])
+j = 0
+for i in range(len(interval95CLTs)):
+    j += trimValsBy
+    graph_three.add('', [{'value': interval95CLTs[i], 'ci': {
+        'type': 'continuous', 'sample_size': j, 'stddev': stdDeviations[i], 'confidence': .95}}])
+    j += trimValsBy
+graph_three.add('', [{'value': 0}])
+j = 0
+for i in range(len(interval997CLTs)):
+    j += trimValsBy
+    graph_three.add('', [{'value': interval997CLTs[i], 'ci': {
+        'type': 'continuous', 'sample_size': j, 'stddev': stdDeviations[i], 'confidence': .997}}])
+    j += trimValsBy
 graph_three.render_to_file('graph_three.svg')
 
 '''
