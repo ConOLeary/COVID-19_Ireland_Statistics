@@ -76,13 +76,14 @@ for i in range(len(ns)):
     # print("variances["+str(i)+"] "+str(variance))
     variancesUpperBound.append((probXi + (probXi - variance) / 2) * 100)
     variancesLowerBound.append((probXi - (probXi - variance) / 2) * 100)
-    variancesEmpiricalM.append((probXi * (1 - probXi))/len(ns))
+    # variancesEmpiricalM.append(variance/len(ns)) #x0 / 1, x0 + x1 / 2, x0 + x1 + x2 / 3 !!!!!!!!!!!!!!!!!!!
+    variancesEmpiricalM.append(sum(variances)/(i+1))
     # print("variancesEmpiricalM["+str(i)+"] "+str(variancesEmpiricalM[i]))
     stdDeviations.append(math.sqrt(probXiTot * (1-probXiTot)))
     print("stdDeviations["+str(i)+"] "+str(stdDeviations[i]))
-    interval68CLTs.append(stdDeviations[i]*2)
-    interval95CLTs.append(stdDeviations[i]*4)
-    interval997CLTs.append(stdDeviations[i]*6)
+    interval68CLTs.append(stdDeviations[i]*1)
+    interval95CLTs.append(stdDeviations[i]*2)
+    interval997CLTs.append(stdDeviations[i]*3)
     
 ################## --- Graph generation --- ##################
 
@@ -96,10 +97,10 @@ graph_one.add('Vrnce Bound Lwr', variancesLowerBound)
 graph_one.render_to_file('graph_one.svg')
 
 graph_two = pygal.Line(x_label_rotation=5, show_minor_x_labels=False, x_title='Days since March 18th 2020', y_title='Percent')
-graph_two.title = "Variance in the mean of the probability a tested person won't have serious symptoms and tests positive, as well as the variance of such."
+graph_two.title = "Variance in the empirical mean of the probability a tested person won't have serious symptoms and tests positive."
 graph_two.x_labels = map(str, range(0, 136))
 graph_two.x_labels_major = map(str, range(0, 136)[0::10])
-graph_two.add('Vrnce of mean', variancesEmpiricalM)
+graph_two.add('Vrnce of emprcl mean', variancesEmpiricalM)
 graph_two.render_to_file('graph_two.svg')
 
 trimValsBy = 19
