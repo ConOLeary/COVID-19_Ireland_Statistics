@@ -64,64 +64,86 @@ for i in range(len(ns)):
     beta = hs[i]/N
     betas.append(beta)
     alphas.append(alpha)
-    xs.append(alpha*N + beta*N)
-    logxs.append(math.log(xs[i]))
+    x = alpha*N + beta*N
+    xs.append(x)
+    logxs.append(math.log(x))
 
+'''
 growthParams = []
 #a = (log(x_k) - log (x_0)) / k
 for i in range(1,len(ns)):
     growthParams.append((math.log(xs[i]) - math.log(xs[0])) / i)
     print("growthParams["+str(i)+"] "+str(growthParams[i-1]))
-
+'''
+'''
+The variance in (c) should be a lot smaller.
+Because it is the variance of an estimate of a variable,
+whereas in (b) it's the variance of the underlying variable itself.
+(c) is just a measure of the uncertainty of the mean,
+whereas (b) is a measure of the uncertainty of a variable,
+which includes both uncertainty about its mean
+and how much it varies around that mean.
+'''
 
 psCumilitive = 0
 hsCumilitive = 0
 nsCumilitive = 0
-probXiDay = [] # Prob(Xi = 1) on a given day
-probXiTots = []
-variances = []
-variancesUpperBound = []
-variancesLowerBound = []
-variancesEmpiricalM = []
-expectedXTots = []
-stdDeviations = []
-sampleStdDeviations = []
+probXis = []
+probX0s = []
+vrnceXs = []
+vrnceXsUprBound = []
+vrnceXsLwrBound = []
+vrnceEmpiricalMXs = []
+stdDevXs = []
+
 interval68CLTs = []
 interval95CLTs = []
 interval997CLTs = []
 interval68Chebys = []
 interval95Chebys = []
 interval997Chebys = []
-#standard deviation of sample means / sqrt(1 - 0.95) * #rows
+
 for i in range(len(ns)):
     psCumilitive = psCumilitive + ps[i]
     hsCumilitive = hsCumilitive + hs[i]
     nsCumilitive = nsCumilitive + ns[i]
     probXi = ((ps[i] - hs[i]) / ns[i])
-    probXiDay.append(probXi * 100)
-    #print("probXiDay["+str(i)+"] "+str(probXi))
-    probXiTot = Average(probXiDay)
-    probXiTots.append(probXiTot)
-    #print("probXiTots["+str(i)+"] "+str(probXiTots[i]))
-    variance = probXi * (1 - probXi)
-    variances.append(variance)
-    # print("variances["+str(i)+"] "+str(variance))
-    variancesUpperBound.append((probXi + (probXi - variance) / 2) * 100)
-    variancesLowerBound.append((probXi - (probXi - variance) / 2) * 100)
-    # variancesEmpiricalM.append(variance/len(ns)) #x0 / 1, x0 + x1 / 2, x0 + x1 + x2 / 3 !!!!!!!!!!!!!!!!!!!
-    variancesEmpiricalM.append(sum(variances)/(i+1))
-    # print("variancesEmpiricalM["+str(i)+"] "+str(variancesEmpiricalM[i]))
+    probXis.append(probXi)
+    probX0 = ((psCumilitive - hsCumilitive) / nsCumilitive)
+    probX0s.append(probX0)
+
+for i in range(len(ns)):
+    ProbXiTotal = 0
+    ProbXiTotal = ProbXiTotal + probXis[i]
+    avrg = ProbXiTotal / (i + 1)
+    diffsqrdTot = 0
+    for j in range(i):
+        diffsqrd = (probXis[j] - avrg) * (probXis[j] - avrg)
+        diffsqrdTot = diffsqrdTot + diffsqrd
+    if ((i - 1) < 1):
+        vrnceX = 0
+    else:
+        vrnceX = diffsqrdTot / (i - 1)
+    stdDevX = math.sqrt(vrnceX)
+    stdDevXs.append(stdDevX)
+    interval68CLTs.append(stdDevX*2)
+    interval95CLTs.append(stdDevX*4)
+    interval997CLTs.append(stdDevX*6)
+    vrnceXUprBound = (probXis[i] + (vrnceX / 2))
+    vrnceXLwrBound = (probXis[i] - (vrnceX / 2))
+    vrnceX = vrnceX * 100
+    vrnceXsUprBound.append(vrnceXUprBound)
+    vrnceXsLwrBound.append(vrnceXLwrBound)
+
+for i in range(len(ns) - 1):
+    empiricalMX = sum(probXis[0:i+1]) / (i + 1)
+    vrnceEmpiricalMX = (probXis[i] - empiricalMX)*(probXis[i] - empiricalMX)
+    vrnceEmpiricalMXs.append(vrnceEmpiricalMX)
+    '''
     interval68Chebys.append(math.sqrt(variances[i]) / math.sqrt(1 - 0.32) * i)
     interval95Chebys.append(math.sqrt(variances[i]) / math.sqrt(1 - 0.05) * i)
     interval997Chebys.append(math.sqrt(variances[i]) / math.sqrt(1 - 0.003) * i)
-    stdDevN = math.sqrt(probXiTot * (1-probXiTot))
-    stdDeviations.append(stdDevN)
-    #print("stdDeviations["+str(i)+"] "+str(stdDevN))
-    interval68CLTs.append(stdDevN*1)
-    interval95CLTs.append(stdDevN*2)
-    interval997CLTs.append(stdDevN*3)
-
-print("probXiTot["+str(len(ns))+"] "+str(probXiTots[len(ns)-1]))
+    '''
     
 #################################### --- Graph generation --- ####################################
 
@@ -129,25 +151,25 @@ graph_one = pygal.Line(x_label_rotation=5, show_minor_x_labels=False, x_title='D
 graph_one.title = "Probability a tested person won't have serious symptoms and tests positive, as well as the variance of such."
 graph_one.x_labels = map(str, range(0, 136))
 graph_one.x_labels_major = map(str, range(0, 136)[0::10])
-graph_one.add('P(Xi)', probXiDay)
-graph_one.add('Vrnce Bound Upr', variancesUpperBound)
-graph_one.add('Vrnce Bound Lwr', variancesLowerBound)
+graph_one.add('P(Xi)', probXis)
+graph_one.add('Vrnce Bound Upr', vrnceXsUprBound)
+graph_one.add('Vrnce Bound Lwr', vrnceXsLwrBound)
 graph_one.render_to_file('graph_one.svg')
 
 graph_two = pygal.Line(x_label_rotation=5, show_minor_x_labels=False, x_title='Days since March 18th 2020', y_title='Percent')
 graph_two.title = "Variance in the empirical mean of the probability a tested person won't have serious symptoms and tests positive."
 graph_two.x_labels = map(str, range(0, 136))
 graph_two.x_labels_major = map(str, range(0, 136)[0::10])
-graph_two.add('Vrnce of emprcl mean', variancesEmpiricalM)
+graph_two.add('Vrnce of emprcl mean', vrnceEmpiricalMXs)
 graph_two.render_to_file('graph_two.svg')
-
+'''
 graph_five = pygal.Line(x_label_rotation=5, show_minor_x_labels=False, x_title='Days since March 18th 2020', y_title='some kind of y thing')
 graph_five.title = "dunno yet really"
 graph_five.x_labels = map(str, range(0, 136))
 graph_five.x_labels_major = map(str, range(0, 136)[0::10])
 graph_five.add('some kind of values really', growthParams)
 graph_five.render_to_file('graph_five.svg')
-
+'''
 # x axis is days(ks). y axis log_x(k)
 graph_six = pygal.Line(x_label_rotation=5, show_minor_x_labels=False, x_title='Days since March 18th 2020', y_title='Log of cases')
 graph_six.title = "The logs of x over time"
@@ -163,7 +185,7 @@ interval997CLTs = interval997CLTs[0::trimValsBy]
 interval68Chebys = interval68Chebys[0::trimValsBy]
 interval95Chebys = interval95Chebys[0::trimValsBy]
 interval997Chebys = interval997Chebys[0::trimValsBy]
-stdDeviations = stdDeviations[0::trimValsBy]
+stdDeviations = stdDevXs[0::trimValsBy]
 
 graph_three = pygal.Bar(x_title='0->N 3 times, where each bar represents the change after 19 additional values', y_title='Span of interval in percent', style=pygal.style.styles['default']())
 graph_three.title = '68, 95, & 99.7% confidence intervals vs time for P(X0 = 1) using the CLT'
