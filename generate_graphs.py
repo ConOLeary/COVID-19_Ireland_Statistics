@@ -2,10 +2,7 @@ import pygal
 import csv
 import math
 
-def Average(lst): 
-    return (sum(lst) / len(lst)) / 100
-
-################## --- Data extraction --- ##################
+#################################### --- Data extraction --- ####################################
 
 N = 4700000 # Population of the Republic of Ireland
 
@@ -42,6 +39,8 @@ with open('Irish COVID-19 infections vs time.csv', 'r') as file:
         i+=1
 
 
+#################################### --- Data processing --- ####################################
+
 # Each element of the following arrays pertains to a day,
 #  starting from 2020/03/18 00:00:00.
 
@@ -54,6 +53,62 @@ for row in tests_vs_time:
     ps.append(float(row[4]))
 for row in infections_vs_time:
     hs.append(float(row[9]))
+
+probXis = []
+meanProbXis = []
+vrnceXs = []
+vrnceXsUprBound = []
+vrnceXsLwrBound = []
+vrnceEmpiricalMXs = []
+stdDevXs = []
+interval68CLTs = []
+interval95CLTs = []
+interval997CLTs = []
+interval68Chebys = []
+interval95Chebys = []
+interval997Chebys = []
+
+for i in range(len(ns)):
+
+    probXi = ((ps[i] - hs[i]) / ns[i])
+    probXis.append(probXi)
+
+for i in range(len(ns)):
+    ProbXiTotal = 0
+    ProbXiTotal = ProbXiTotal + probXis[i]
+    avrgXi = ProbXiTotal / (i + 1)
+    meanProbXis.append(avrgXi)
+    diffsqrdTot = 0
+    for j in range(i):
+        diffsqrd = (probXis[j] - avrgXi)**2
+        diffsqrdTot = diffsqrdTot + diffsqrd
+    if ((i - 1) < 1):
+        vrnceX = 0
+    else:
+        vrnceX = diffsqrdTot / (i - 1)
+    vrnceXUprBound = (probXis[i] + (vrnceX / 2))
+    vrnceXLwrBound = (probXis[i] - (vrnceX / 2))
+    vrnceX = vrnceX * 100 # For cosmetic reasons on graph
+    vrnceXsUprBound.append(vrnceXUprBound)
+    vrnceXsLwrBound.append(vrnceXLwrBound)
+    stdDevX = math.sqrt(vrnceX)
+    stdDevXs.append(stdDevX)
+
+    interval95Chebys.append((math.sqrt(vrnceX / 0.05)))
+    # sqrt(variance / 0.05) = 2 * x  
+
+for i in range(len(ns) - 1):
+    metaMean = sum(meanProbXis[0:i+1]) / (i + 1)
+    diffsqrdTot = 0
+    for j in range(i):
+        diffsqrd = (meanProbXis[j] - metaMean)**2
+        diffsqrdTot = diffsqrdTot + diffsqrd
+    if ((i - 1) < 1):
+        metaVrnceX = 0
+    else:
+        metaVrnceX = diffsqrdTot / (i - 1)
+    vrnceEmpiricalMXs.append(metaVrnceX)
+
 
 betas = []
 alphas = []
@@ -75,76 +130,7 @@ for i in range(1,len(ns)):
     growthParams.append((math.log(xs[i]) - math.log(xs[0])) / i)
     print("growthParams["+str(i)+"] "+str(growthParams[i-1]))
 '''
-'''
-The variance in (c) should be a lot smaller.
-Because it is the variance of an estimate of a variable,
-whereas in (b) it's the variance of the underlying variable itself.
-(c) is just a measure of the uncertainty of the mean,
-whereas (b) is a measure of the uncertainty of a variable,
-which includes both uncertainty about its mean
-and how much it varies around that mean.
-'''
 
-psCumilitive = 0
-hsCumilitive = 0
-nsCumilitive = 0
-probXis = []
-probX0s = []
-vrnceXs = []
-vrnceXsUprBound = []
-vrnceXsLwrBound = []
-vrnceEmpiricalMXs = []
-stdDevXs = []
-
-interval68CLTs = []
-interval95CLTs = []
-interval997CLTs = []
-interval68Chebys = []
-interval95Chebys = []
-interval997Chebys = []
-
-for i in range(len(ns)):
-    psCumilitive = psCumilitive + ps[i]
-    hsCumilitive = hsCumilitive + hs[i]
-    nsCumilitive = nsCumilitive + ns[i]
-    probXi = ((ps[i] - hs[i]) / ns[i])
-    probXis.append(probXi)
-    probX0 = ((psCumilitive - hsCumilitive) / nsCumilitive)
-    probX0s.append(probX0)
-
-for i in range(len(ns)):
-    ProbXiTotal = 0
-    ProbXiTotal = ProbXiTotal + probXis[i]
-    avrg = ProbXiTotal / (i + 1)
-    diffsqrdTot = 0
-    for j in range(i):
-        diffsqrd = (probXis[j] - avrg) * (probXis[j] - avrg)
-        diffsqrdTot = diffsqrdTot + diffsqrd
-    if ((i - 1) < 1):
-        vrnceX = 0
-    else:
-        vrnceX = diffsqrdTot / (i - 1)
-    stdDevX = math.sqrt(vrnceX)
-    stdDevXs.append(stdDevX)
-    interval68CLTs.append(stdDevX*2)
-    interval95CLTs.append(stdDevX*4)
-    interval997CLTs.append(stdDevX*6)
-    vrnceXUprBound = (probXis[i] + (vrnceX / 2))
-    vrnceXLwrBound = (probXis[i] - (vrnceX / 2))
-    vrnceX = vrnceX * 100
-    vrnceXsUprBound.append(vrnceXUprBound)
-    vrnceXsLwrBound.append(vrnceXLwrBound)
-
-for i in range(len(ns) - 1):
-    empiricalMX = sum(probXis[0:i+1]) / (i + 1)
-    vrnceEmpiricalMX = (probXis[i] - empiricalMX)*(probXis[i] - empiricalMX)
-    vrnceEmpiricalMXs.append(vrnceEmpiricalMX)
-    '''
-    interval68Chebys.append(math.sqrt(variances[i]) / math.sqrt(1 - 0.32) * i)
-    interval95Chebys.append(math.sqrt(variances[i]) / math.sqrt(1 - 0.05) * i)
-    interval997Chebys.append(math.sqrt(variances[i]) / math.sqrt(1 - 0.003) * i)
-    '''
-    
 #################################### --- Graph generation --- ####################################
 
 graph_one = pygal.Line(x_label_rotation=5, show_minor_x_labels=False, x_title='Days since March 18th 2020', y_title='Percent')
@@ -157,11 +143,33 @@ graph_one.add('Vrnce Bound Lwr', vrnceXsLwrBound)
 graph_one.render_to_file('graph_one.svg')
 
 graph_two = pygal.Line(x_label_rotation=5, show_minor_x_labels=False, x_title='Days since March 18th 2020', y_title='Percent')
-graph_two.title = "Variance in the empirical mean of the probability a tested person won't have serious symptoms and tests positive."
+graph_two.title = "Variance of the empirical mean of the probability a tested person won't have serious symptoms and tests positive."
 graph_two.x_labels = map(str, range(0, 136))
 graph_two.x_labels_major = map(str, range(0, 136)[0::10])
 graph_two.add('Vrnce of emprcl mean', vrnceEmpiricalMXs)
 graph_two.render_to_file('graph_two.svg')
+
+trimValsBy = 10
+trmdProbXis = probXis[0::trimValsBy]
+trmdInterval95Chebys = interval95Chebys[0::trimValsBy]
+
+graph_three = pygal.Bar(x_title="Days", y_title='Percent', style=pygal.style.styles['default']())
+graph_three.title = ''
+j = 0
+for i in range(len(trmdProbXis)):
+    graph_three.add('', [{'value': trmdProbXis[i], 'ci': {
+        'type': 'continuous', 'sample_size': ns[i*trimValsBy], 'stddev': stdDevXs[i*trimValsBy], 'confidence': .95}}])
+graph_three.title = "Confidence intervals of estimates of Prob(X0 = 1) using the Central Limit Theorem"
+graph_three.render_to_file('graph_three.svg')
+
+graph_four = pygal.Bar(x_title="Days", y_title='Percent', style=pygal.style.styles['default']())
+graph_four.title = ''
+j = 0
+for i in range(len(trmdInterval95Chebys)):
+    graph_four.add('', [{'value': trmdProbXis[i], 'ci': {'low': trmdProbXis[i]-(trmdInterval95Chebys[i]/200), 'high': trmdProbXis[i]+(trmdInterval95Chebys[i]/200)}}])
+graph_four.title = "Confidence intervals of estimates of Prob(X0 = 1) using Chebyshev's Inequality"
+graph_four.render_to_file('graph_four.svg')
+
 '''
 graph_five = pygal.Line(x_label_rotation=5, show_minor_x_labels=False, x_title='Days since March 18th 2020', y_title='some kind of y thing')
 graph_five.title = "dunno yet really"
@@ -177,71 +185,3 @@ graph_six.x_labels = map(str, range(0, 136))
 graph_six.x_labels_major = map(str, range(0, 136)[0::10])
 graph_six.add('Logs of x', logxs)
 graph_six.render_to_file('graph_six.svg')
-
-trimValsBy = 19
-interval68CLTs = interval68CLTs[0::trimValsBy]
-interval95CLTs = interval95CLTs[0::trimValsBy]
-interval997CLTs = interval997CLTs[0::trimValsBy]
-interval68Chebys = interval68Chebys[0::trimValsBy]
-interval95Chebys = interval95Chebys[0::trimValsBy]
-interval997Chebys = interval997Chebys[0::trimValsBy]
-stdDeviations = stdDevXs[0::trimValsBy]
-
-graph_three = pygal.Bar(x_title='0->N 3 times, where each bar represents the change after 19 additional values', y_title='Span of interval in percent', style=pygal.style.styles['default']())
-graph_three.title = '68, 95, & 99.7% confidence intervals vs time for P(X0 = 1) using the CLT'
-j = 0
-for i in range(len(interval68CLTs)):
-    j += trimValsBy
-    graph_three.add('', [{'value': interval68CLTs[i], 'ci': {
-        'type': 'continuous', 'sample_size': j, 'stddev': stdDeviations[i], 'confidence': .68}}])
-    j += trimValsBy
-graph_three.add('', [{'value': 0}])
-j = 0
-for i in range(len(interval95CLTs)):
-    j += trimValsBy
-    graph_three.add('', [{'value': interval95CLTs[i], 'ci': {
-        'type': 'continuous', 'sample_size': j, 'stddev': stdDeviations[i], 'confidence': .95}}])
-    j += trimValsBy
-graph_three.add('', [{'value': 0}])
-j = 0
-for i in range(len(interval997CLTs)):
-    j += trimValsBy
-    graph_three.add('', [{'value': interval997CLTs[i], 'ci': {
-        'type': 'continuous', 'sample_size': j, 'stddev': stdDeviations[i], 'confidence': .997}}])
-    j += trimValsBy
-graph_three.render_to_file('graph_three.svg')
-
-graph_three = pygal.Bar(x_title='0->N 3 times, where each bar represents the change after 19 additional values', y_title='Span of interval in percent', style=pygal.style.styles['default']())
-graph_three.title = '68, 95, & 99.7% confidence intervals vs time for P(X0 = 1) using the Chebyshevs inequality'
-j = 0
-for i in range(len(interval68Chebys)):
-    j += trimValsBy
-    graph_three.add('', [{'value': interval68Chebys[i], 'ci': {
-        'type': 'continuous', 'sample_size': j, 'stddev': stdDeviations[len(stdDeviations) - 1], 'confidence': .68}}])
-    j += trimValsBy
-graph_three.add('', [{'value': 0}])
-j = 0
-for i in range(len(interval95Chebys)):
-    j += trimValsBy
-    graph_three.add('', [{'value': interval95Chebys[i], 'ci': {
-        'type': 'continuous', 'sample_size': j, 'stddev': stdDeviations[len(stdDeviations) - 1], 'confidence': .95}}])
-    j += trimValsBy
-graph_three.add('', [{'value': 0}])
-j = 0
-for i in range(len(interval997Chebys)):
-    j += trimValsBy
-    graph_three.add('', [{'value': interval997Chebys[i], 'ci': {
-        'type': 'continuous', 'sample_size': j, 'stddev': stdDeviations[len(stdDeviations) - 1], 'confidence': .997}}])
-    j += trimValsBy
-graph_three.render_to_file('graph_four.svg')
-
-'''
-line_chart = pygal.Line()
-line_chart.title = 'Browser usage evolution (in %)'
-line_chart.x_labels = map(str, range(2002, 2013))
-line_chart.add('Firefox', [None, None,    0, 16.6,   25,   31, 36.4, 45.5, 46.3, 42.8, 37.1])
-line_chart.add('Chrome',  [None, None, None, None, None, None,    0,  3.9, 10.8, 23.8, 35.3])
-line_chart.add('IE',      [85.8, 84.6, 84.7, 74.5,   66, 58.6, 54.7, 44.8, 36.2, 26.6, 20.1])
-line_chart.add('Others',  [14.2, 15.4, 15.3,  8.9,    9, 10.4,  8.9,  5.8,  6.7,  6.8,  7.5])
-line_chart.render_to_file('test.svg')
-'''
